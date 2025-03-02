@@ -1,56 +1,2130 @@
-html
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>血压监测助手</title>
-    <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="css/style.css" rel="stylesheet">
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-firestore.js"></script>
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>血压助手</title>
+
+  <!-- 引入Chart.js用于图表显示 -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- 引入苹果风格字体 -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- 引入FontAwesome图标 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    :root {
+      --primary-color: #007AFF;
+      --success-color: #34C759;
+      --warning-color: #FF9500;
+      --danger-color: #FF3B30;
+      --background-light: #F2F2F7;
+      --card-light: #FFFFFF;
+      --text-primary-light: #000000;
+      --text-secondary-light: #8E8E93;
+      --border-light: rgba(60, 60, 67, 0.1);
+      
+      --background-dark: #1C1C1E;
+      --card-dark: #2C2C2E;
+      --text-primary-dark: #FFFFFF;
+      --text-secondary-dark: #98989F;
+      --border-dark: rgba(255, 255, 255, 0.15);
+      
+      --background: var(--background-light);
+      --card: var(--card-light);
+      --text-primary: var(--text-primary-light);
+      --text-secondary: var(--text-secondary-light);
+      --border: var(--border-light);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --background: var(--background-dark);
+        --card: var(--card-dark);
+        --text-primary: var(--text-primary-dark);
+        --text-secondary: var(--text-secondary-dark);
+        --border: var(--border-dark);
+      }
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      background-color: var(--background);
+      color: var(--text-primary);
+      transition: all 0.3s ease;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+
+    /* 标题栏样式 */
+    .header {
+      padding: 1rem 0;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .app-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .tab-container {
+      display: flex;
+      border-radius: 10px;
+      overflow: hidden;
+      background-color: var(--card);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      margin-bottom: 20px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .tab {
+      flex: 1;
+      text-align: center;
+      padding: 12px;
+      cursor: pointer;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .tab.active {
+      color: var(--primary-color);
+    }
+
+    .tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 40%;
+      height: 3px;
+      background-color: var(--primary-color);
+      border-radius: 3px;
+    }
+
+    /* 内容区域样式 */
+    .content {
+      display: none;
+      padding: 1rem;
+      background-color: var(--card);
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      margin-bottom: 1.5rem;
+    }
+
+    .content.active {
+      display: block;
+    }
+
+    /* 卡片样式 */
+    .card {
+      background-color: var(--card);
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--text-primary);
+    }
+
+    /* 表单样式 */
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background-color: var(--card);
+      color: var(--text-primary);
+      font-size: 16px;
+      transition: border-color 0.3s ease;
+    }
+
+    .form-input:focus {
+      border-color: var(--primary-color);
+      outline: none;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .form-col {
+      flex: 1;
+      min-width: 150px;
+    }
+
+    .bp-unit {
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      margin-top: 4px;
+    }
+
+    /* 按钮样式 */
+    .btn {
+      padding: 12px 20px;
+      border-radius: 10px;
+      border: none;
+      font-weight: 500;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-primary {
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: #0062CC;
+    }
+
+    .btn-block {
+      width: 100%;
+    }
+
+    .btn-icon {
+      margin-right: 8px;
+    }
+
+    /* 血压记录列表样式 */
+    .records-list {
+      margin-top: 1rem;
+    }
+
+    .record-item {
+      padding: 1rem;
+      border-radius: 10px;
+      background-color: var(--card);
+      border: 1px solid var(--border);
+      margin-bottom: 0.8rem;
+    }
+
+    .record-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+
+    .record-date {
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .record-time {
+      color: var(--text-secondary);
+    }
+
+    .record-body {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .record-value {
+      flex: 1;
+      min-width: 80px;
+    }
+
+    .record-label {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.2rem;
+    }
+
+    .record-number {
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+
+    .systolic {
+      color: var(--danger-color);
+    }
+
+    .diastolic {
+      color: var(--warning-color);
+    }
+
+    .heart-rate {
+      color: var(--primary-color);
+    }
+
+    .record-actions {
+      margin-top: 0.5rem;
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+
+    .btn-icon-only {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--background);
+      color: var(--text-secondary);
+    }
+
+    .btn-icon-only:hover {
+      background-color: var(--border);
+      color: var(--primary-color);
+    }
+
+    /* 图表样式 */
+    .chart-container {
+      width: 100%;
+      height: 250px;
+      margin: 1rem 0;
+    }
+
+    /* 提醒列表样式 */
+    .reminder-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      border-radius: 10px;
+      background-color: var(--card);
+      border: 1px solid var(--border);
+      margin-bottom: 0.8rem;
+    }
+
+    .reminder-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .reminder-title {
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 0.2rem;
+    }
+
+    .reminder-time {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .reminder-toggle {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 30px;
+    }
+
+    .reminder-toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .3s;
+      border-radius: 34px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 24px;
+      width: 24px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .toggle-slider {
+      background-color: var(--success-color);
+    }
+
+    input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+    }
+
+    /* 无记录状态 */
+    .empty-state {
+      text-align: center;
+      padding: 2rem 1rem;
+      color: var(--text-secondary);
+    }
+
+    .empty-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      color: var(--text-secondary);
+      opacity: 0.5;
+    }
+
+    .empty-text {
+      font-size: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    /* 弹窗样式 */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background-color: var(--card);
+      border-radius: 12px;
+      width: 90%;
+      max-width: 400px;
+      padding: 1.5rem;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    .modal-header {
+      margin-bottom: 1.5rem;
+    }
+
+    .modal-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .modal-body {
+      margin-bottom: 1.5rem;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+
+    /* 响应式调整 */
+    @media (max-width: 480px) {
+      .form-row {
+        flex-direction: column;
+      }
+      
+      .form-col {
+        width: 100%;
+      }
+    }
+
+    /* 定时提醒相关 */
+    .active-reminder {
+      background-color: rgba(0, 122, 255, 0.1);
+      border-left: 3px solid var(--primary-color);
+    }
+
+    .reminder-type-bp .reminder-icon {
+      color: var(--danger-color);
+    }
+
+    .reminder-type-med .reminder-icon {
+      color: var(--success-color);
+    }
+
+    /* 倒计时提醒样式 */
+    .next-reminder {
+      background-color: rgba(0, 122, 255, 0.1);
+      border-radius: 10px;
+      padding: 15px;
+      margin: 10px 0 20px;
+      text-align: center;
+    }
+
+    .next-reminder-title {
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--primary-color);
+    }
+
+    .next-reminder-time {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin: 5px 0;
+      color: var(--text-primary);
+    }
+
+    .countdown {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    /* 日历导出按钮 */
+    .calendar-export-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--background);
+      color: var(--primary-color);
+      border: 1px solid var(--primary-color);
+      border-radius: 10px;
+      padding: 10px;
+      margin-top: 15px;
+      width: 100%;
+      font-weight: 500;
+    }
+
+    /* 通知提示 */
+    .notification-tip {
+      padding: 10px 15px;
+      background-color: rgba(52, 199, 89, 0.1);
+      border-radius: 8px;
+      margin: 15px 0;
+      display: flex;
+      align-items: center;
+    }
+
+    .notification-tip i {
+      color: var(--success-color);
+      margin-right: 10px;
+      font-size: 1.2rem;
+    }
+
+    .notification-tip-text {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    /* PWA安装提示 */
+    #pwa-install-banner {
+      display: none;
+      background-color: var(--card);
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      padding: 15px;
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .pwa-banner-content {
+      display: flex;
+      align-items: center;
+    }
+
+    .pwa-banner-icon {
+      background-color: var(--primary-color);
+      color: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 15px;
+    }
+
+    .pwa-banner-text {
+      flex: 1;
+    }
+
+    .pwa-banner-title {
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+
+    .pwa-banner-subtitle {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    .pwa-banner-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    .pwa-install-btn {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 15px;
+      margin-top: 10px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .pwa-install-btn i {
+      margin-right: 8px;
+    }
+  </style>
+
+  <!-- PWA META标签 -->
+  <meta name="theme-color" content="#007AFF">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="血压助手">
+  <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIumHj+WOi+WKqeaJp+WMliIsCiAgInNob3J0X25hbWUiOiAi6YeP5Y6L5Yqp5omnIiwKICAic3RhcnRfdXJsIjogIi4vaW5kZXguaHRtbCIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiI2ZmZmZmZiIsCiAgInRoZW1lX2NvbG9yIjogIiMwMDdBRkYiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUI0Yld4dWN6MGlhSFIwY0RvdkwzZDNkeTUzTXk1dmNtY3ZNakF3TUM5emRtY2lJSEJ5WlhObGNuWmxRWE53WldOMFVtRjBhVzg5SW5oTmFXNVpUV2x1SUcxbFpYUWlJSFpwWlhkQ2IzZzlJakFnTUNBek5UQWdNelV3SWo0OGMzUjViR1UrTG1KaGMyVWdleUJtYVd4c09pQjNhR2wwWlRzZ1ptOXVkQzFtWVcxcGJIazZJQ0pKYm5SbGNpd2dMV0Z3Y0d4bExYTjVjM1JsYlN3Z1FteHBibXRNWVdOVGVYTjBaVzBzSUZOaGJuTXRVMlZ5YVdZaU95Qjlabk5sZEVKeWFXZG9kR3hsY3pKdmNYQm1ablpwYzJWUWJHRmlJRDBnSW01cGJXQm5PakF1TnpJNE15QnlaV2M2WkdWbUluMDhMM04wZVd4bFBqeHdjbVZqYVc5dWN5QnVZVzFsUFNKamIyMXdkWFJsY2k0aWN5SWdZM2d0Y21GdVoyVTlJbE5sWTJ0cGJpZ3RNVGt4TGpNeUxESXdMak13TERReExqSXlMQzAzTS4yNSwxNTAuMDAsLTg0LjU2KGJhemlld0teUHBmVkJiVmJ6cGZyeS14aVBueDJmTC1URFlGZG5wYUZnKSIvPjwvc3ZnPiIsCiAgICAgICJzaXplcyI6ICIxOTJ4MTkyIiwKICAgICAgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIKICAgIH0sCiAgICB7CiAgICAgICJzcmMiOiAiZGF0YTppbWFnZS9zdmcreG1sO2Jhc2U2NCxQSE4yWnlCNGJXeHVjejBpYUhSMGNEb3ZMM2QzZHk1M015NXZjbWN2TWpBd01DOXpkbWNpSUhCeVpYTmxjblpsUVhOd1pXTjBVbUYwYVc4OUluaE5hVzVaVFdsdUlHMWxaWFFpSUhacFpYZENiM2c5SWpBZ01DQXpOVEFnTXpVd0lqNDhjM1I1YkdVK0xtSmhjMlVnZXlCbWFXeHNPaUIzYUdsMFpUc2dabTl1ZEMxbVlXMXBiSGs2SUNKSmJuUmxjaXdnTFdGd2NHeGxMWE41YzNSbGJTd2dRbXhwYm10TVlXTlRlWE4wWlcwc0lGTmhibk10VTJWeWFXWWlPeUI5Wm5ObGRFSnlhV2RvZEd4bGN6SjNaVE5yY21Oa1BUMTdjMlZzWmk1b1pXbG5hSFE2TlhSdmJqMWNJbWR5WldWdWMya2hmVHd2YzNSNWJHVStQSEJ5WldOcGIyNXpJRzVoYldVOUltTnZiWEIxZEdWeUxpSnpJaUJqZUMxeVlXNW5aVDBpVTJWamEybHVLQzB4T1RFdU16SXNNakF1TXpBc05ERXVNaklzTFRjekxqSTFMREUxTUM0d01Dd3RPVFF1TlRVcEtteHpheWdwZjI1aGRHbDJaUzVTWlc1a1pYSW9LSVJrYVhKbFkzUjBkbmRqYVdSVGJqQXBLVHQzYVcxaVlYUTVZV05rWkdOV2RIWm9kR3hzUldwd1NWRlRMV2hyYTJSNGJFRm1lbWRuUlc1TlpYTWlMeUkrUEhKbFkzUWdlSEJrWm5SNVpDNDlNVDFuZEc4OVhDSnBaMmhKMGo0aTwvc3ZnPiIsCiAgICAgICJzaXplcyI6ICI1MTJ4NTEyIiwKICAgICAgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIKICAgIH0KICBdCn0=">
 </head>
-<body class="min-h-screen bg-gray-50">
-    <!-- 登录模态框 -->
-    <div id="login-modal" class="modal-backdrop fixed inset-0 flex items-center justify-center">
-        <div class="bg-white rounded-lg p-6 w-96 fade-in">
-            <h2 class="text-xl font-bold mb-4">用户登录</h2>
-            <form id="login-form" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium mb-1">邮箱</label>
-                    <input type="email" name="email" required class="w-full p-2 border rounded">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">密码</label>
-                    <input type="password" name="password" required class="w-full p-2 border rounded">
-                </div>
-                <div class="flex space-x-2">
-                    <button type="submit" class="flex-1 bg-blue-500 text-white py-2 rounded hover:bg-blue-600">
-                        登录
-                    </button>
-                    <button type="button" id="register-btn" class="flex-1 bg-gray-100 py-2 rounded hover:bg-gray-200">
-                        注册
-                    </button>
-                </div>
-            </form>
+<body>
+  <div class="container">
+    <!-- PWA安装横幅 -->
+    <div id="pwa-install-banner">
+      <button class="pwa-banner-close" id="close-pwa-banner"><i class="fas fa-times"></i></button>
+      <div class="pwa-banner-content">
+        <div class="pwa-banner-icon">
+          <i class="fas fa-heartbeat"></i>
         </div>
+        <div class="pwa-banner-text">
+          <div class="pwa-banner-title">安装血压助手应用</div>
+          <div class="pwa-banner-subtitle">将应用添加到主屏幕，随时记录和查看血压数据</div>
+        </div>
+      </div>
+      <button class="pwa-install-btn" id="install-pwa">
+        <i class="fas fa-download"></i> 安装应用
+      </button>
     </div>
 
-    <!-- 主应用界面 (初始隐藏) -->
-    <div id="app" class="hidden">
-        <!-- 这里放之前的所有 HTML 内容 -->
+    <div class="header">
+      <h1 class="app-title">血压助手</h1>
     </div>
 
-    <!-- JavaScript 模块 -->
-    <script src="js/data-manager.js"></script>
-    <script src="js/chart-manager.js"></script>
-    <script src="js/reminder-manager.js"></script>
-    <script src="js/ui-controller.js"></script>
-    <script src="js/app.js"></script>
+    <!-- 下一次提醒倒计时显示 -->
+    <div id="next-reminder-container" style="display: none;">
+      <div class="next-reminder">
+        <div class="next-reminder-title">下一次提醒</div>
+        <div class="next-reminder-time" id="next-reminder-time">--:--</div>
+        <div class="countdown" id="reminder-countdown">还有 --:-- 小时</div>
+        <div id="reminder-message">提醒内容</div>
+      </div>
+    </div>
+
+    <div class="tab-container">
+      <div class="tab active" data-tab="record">
+        <i class="fas fa-plus-circle"></i> 记录
+      </div>
+      <div class="tab" data-tab="history">
+        <i class="fas fa-history"></i> 历史
+      </div>
+      <div class="tab" data-tab="stats">
+        <i class="fas fa-chart-line"></i> 统计
+      </div>
+      <div class="tab" data-tab="reminder">
+        <i class="fas fa-bell"></i> 提醒
+      </div>
+    </div>
+
+    <!-- 记录血压页面 -->
+    <div id="record" class="content active">
+      <div class="card">
+        <h2 class="card-title">添加血压记录</h2>
+        <form id="bp-form">
+          <div class="form-row">
+            <div class="form-col">
+              <div class="form-group">
+                <label class="form-label" for="systolic">收缩压</label>
+                <input type="number" id="systolic" class="form-input" required placeholder="120">
+                <div class="bp-unit">毫米汞柱 (mmHg)</div>
+              </div>
+            </div>
+            <div class="form-col">
+              <div class="form-group">
+                <label class="form-label" for="diastolic">舒张压</label>
+                <input type="number" id="diastolic" class="form-input" required placeholder="80">
+                <div class="bp-unit">毫米汞柱 (mmHg)</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-col">
+              <div class="form-group">
+                <label class="form-label" for="pulse">心率</label>
+                <input type="number" id="pulse" class="form-input" required placeholder="75">
+                <div class="bp-unit">次/分钟 (bpm)</div>
+              </div>
+            </div>
+            <div class="form-col">
+              <div class="form-group">
+                <label class="form-label" for="measurement-time">测量时间</label>
+                <input type="datetime-local" id="measurement-time" class="form-input" required>
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label" for="notes">备注</label>
+            <input type="text" id="notes" class="form-input" placeholder="例如：饭后测量、服药后等">
+          </div>
+          
+          <button type="submit" class="btn btn-primary btn-block">
+            <i class="fas fa-save btn-icon"></i> 保存记录
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- 历史记录页面 -->
+    <div id="history" class="content">
+      <div class="card">
+        <h2 class="card-title">血压历史记录</h2>
+        <div id="records-list" class="records-list">
+          <!-- 动态生成的记录将在此显示 -->
+          <div class="empty-state">
+            <div class="empty-icon">
+              <i class="fas fa-file-medical-alt"></i>
+            </div>
+            <div class="empty-text">暂无血压记录</div>
+            <button class="btn btn-primary" id="add-first-record">
+              <i class="fas fa-plus btn-icon"></i> 添加第一条记录
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 统计页面 -->
+    <div id="stats" class="content">
+      <div class="card">
+        <h2 class="card-title">血压趋势</h2>
+        <div class="chart-container">
+          <canvas id="bpChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">近期数据统计</h2>
+        <div id="bp-stats">
+          <!-- 统计信息将在此显示 -->
+          <div class="empty-state">
+            <div class="empty-icon">
+              <i class="fas fa-chart-bar"></i>
+            </div>
+            <div class="empty-text">需要至少 3 条记录来查看统计数据</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 提醒页面 -->
+    <div id="reminder" class="content">
+      <div class="card">
+        <h2 class="card-title">网页版提醒功能说明</h2>
+        <p style="margin-bottom: 15px; color: var(--text-secondary);">
+          由于浏览器限制，网页版无法在后台发送提醒。以下是几种替代方案：
+        </p>
+        
+        <div class="notification-tip">
+          <i class="fas fa-info-circle"></i>
+          <div class="notification-tip-text">
+            1. 添加提醒后，我们会在您下次访问网页时检查是否有错过的提醒<br>
+            2. 您可以将提醒导出到手机日历应用<br>
+            3. 您可以将此网页安装为应用，获得更好的体验
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">添加提醒</h2>
+        <form id="reminder-form">
+          <div class="form-group">
+            <label class="form-label" for="reminder-title">提醒名称</label>
+            <input type="text" id="reminder-title" class="form-input" required placeholder="例如：晨起测量血压">
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label" for="reminder-type">提醒类型</label>
+            <select id="reminder-type" class="form-input" required>
+              <option value="bp">测量血压</option>
+              <option value="med">服用药物</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label" for="reminder-time">提醒时间</label>
+            <input type="time" id="reminder-time" class="form-input" required>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">重复</label>
+            <div id="reminder-days" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
+              <button type="button" class="btn day-btn" data-day="1">一</button>
+              <button type="button" class="btn day-btn" data-day="2">二</button>
+              <button type="button" class="btn day-btn" data-day="3">三</button>
+              <button type="button" class="btn day-btn" data-day="4">四</button>
+              <button type="button" class="btn day-btn" data-day="5">五</button>
+              <button type="button" class="btn day-btn" data-day="6">六</button>
+              <button type="button" class="btn day-btn" data-day="0">日</button>
+            </div>
+          </div>
+          
+          <button type="submit" class="btn btn-primary btn-block">
+            <i class="fas fa-bell btn-icon"></i> 保存提醒
+          </button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">提醒列表</h2>
+        <div id="reminders-list">
+          <!-- 提醒将在此显示 -->
+          <div class="empty-state">
+            <div class="empty-icon">
+              <i class="fas fa-bell-slash"></i>
+            </div>
+            <div class="empty-text">暂无提醒</div>
+          </div>
+        </div>
+        
+        <!-- 导出提醒到日历 -->
+        <button id="export-calendar" class="calendar-export-btn">
+          <i class="fas fa-calendar-alt" style="margin-right: 8px;"></i> 导出提醒到日历
+        </button>
+      </div>
+    </div>
+
+    <!-- 确认删除弹窗 -->
+    <div id="delete-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">删除记录</h3>
+        </div>
+        <div class="modal-body">
+          <p>确定要删除这条记录吗？此操作无法撤销。</p>
+        </div>
+        <div class="modal-footer">
+          <button id="cancel-delete" class="btn" style="background-color: var(--background);">取消</button>
+          <button id="confirm-delete" class="btn btn-primary" style="background-color: var(--danger-color);">删除</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 错过提醒通知弹窗 -->
+    <div id="missed-reminder-alert" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">错过的提醒</h3>
+        </div>
+        <div class="modal-body">
+          <p id="missed-reminder-message">您有错过的提醒</p>
+          <div id="missed-reminders-list" style="margin-top: 10px;"></div>
+        </div>
+        <div class="modal-footer">
+          <button id="dismiss-missed-reminder" class="btn" style="background-color: var(--background);">知道了</button>
+          <button id="go-to-record" class="btn btn-primary">去记录</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 初始化应用程序
+    document.addEventListener('DOMContentLoaded', () => {
+      // 设置当前日期时间为默认测量时间
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      
+      document.getElementById('measurement-time').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+
+      // 初始化数据库
+      initDB();
+
+      // 设置标签页切换
+      setupTabs();
+
+      // 设置表单提交
+      setupForms();
+
+      // 加载数据
+      loadBPRecords();
+      loadReminders();
+
+      // 更新下一次提醒显示
+      updateNextReminderDisplay();
+      
+      // 每分钟更新一次下一次提醒的倒计时
+      setInterval(updateNextReminderDisplay, 60000);
+
+      // 设置日期按钮点击逻辑
+      setupDayButtons();
+      
+      // 检查是否有错过的提醒
+      checkForMissedReminders();
+      
+      // 设置导出日历功能
+      setupCalendarExport();
+      
+      // 设置PWA安装
+      setupPWA();
+    });
+
+    // 设置标签页切换
+    function setupTabs() {
+      const tabs = document.querySelectorAll('.tab');
+      const contents = document.querySelectorAll('.content');
+
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          // 移除所有激活状态
+          tabs.forEach(t => t.classList.remove('active'));
+          contents.forEach(c => c.classList.remove('active'));
+
+          // 激活当前标签
+          tab.classList.add('active');
+          const tabName = tab.dataset.tab;
+          document.getElementById(tabName).classList.add('active');
+
+          // 如果切换到统计页，更新图表
+          if (tabName === 'stats') {
+            updateChart();
+          }
+        });
+      });
+
+      // 添加第一条记录按钮跳转
+      document.getElementById('add-first-record').addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        contents.forEach(c => c.classList.remove('active'));
+
+        document.querySelector('[data-tab="record"]').classList.add('active');
+        document.getElementById('record').classList.add('active');
+      });
+    }
+
+    // 设置表单提交
+    function setupForms() {
+      // 血压记录表单
+      const bpForm = document.getElementById('bp-form');
+      bpForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const systolic = parseInt(document.getElementById('systolic').value);
+        const diastolic = parseInt(document.getElementById('diastolic').value);
+        const pulse = parseInt(document.getElementById('pulse').value);
+        const time = new Date(document.getElementById('measurement-time').value);
+        const notes = document.getElementById('notes').value;
+
+        const record = {
+          id: Date.now(),
+          systolic,
+          diastolic,
+          pulse,
+          timestamp: time.getTime(),
+          notes
+        };
+
+        await addBPRecord(record);
+        bpForm.reset();
+
+        // 重新设置当前时间
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        
+        document.getElementById('measurement-time').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+
+        // 显示成功消息
+        alert('血压记录已保存');
+      });
+
+      // 提醒表单
+      const reminderForm = document.getElementById('reminder-form');
+      reminderForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const title = document.getElementById('reminder-title').value;
+        const type = document.getElementById('reminder-type').value;
+        const time = document.getElementById('reminder-time').value;
+        
+        // 获取选中的日期
+        const selectedDays = [];
+        document.querySelectorAll('.day-btn.selected').forEach(btn => {
+          selectedDays.push(parseInt(btn.dataset.day));
+        });
+
+        if (selectedDays.length === 0) {
+          alert('请至少选择一天进行提醒');
+          return;
+        }
+
+        const reminder = {
+          id: Date.now(),
+          title,
+          type,
+          time,
+          days: selectedDays,
+          active: true,
+          lastChecked: Date.now() // 记录最后检查时间
+        };
+
+        await addReminder(reminder);
+        reminderForm.reset();
+        
+        // 清除日期选择
+        document.querySelectorAll('.day-btn').forEach(btn => {
+          btn.classList.remove('selected');
+        });
+
+        // 更新下一次提醒显示
+        updateNextReminderDisplay();
+
+        // 尝试请求通知权限
+        requestNotificationPermission();
+
+        // 显示成功消息
+        alert('提醒已设置');
+        
+        // 重新加载提醒列表
+        loadReminders();
+      });
+    }
+
+    // 设置日期按钮
+    function setupDayButtons() {
+      const dayButtons = document.querySelectorAll('.day-btn');
+      
+      dayButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          btn.classList.toggle('selected');
+          
+          // 添加选中样式
+          if (btn.classList.contains('selected')) {
+            btn.style.backgroundColor = 'var(--primary-color)';
+            btn.style.color = 'white';
+          } else {
+            btn.style.backgroundColor = 'var(--background)';
+            btn.style.color = 'var(--text-primary)';
+          }
+        });
+        
+        // 初始样式
+        btn.style.backgroundColor = 'var(--background)';
+        btn.style.color = 'var(--text-primary)';
+        btn.style.border = '1px solid var(--border)';
+        btn.style.minWidth = '40px';
+      });
+    }
+
+    // IndexedDB数据库初始化
+    let db;
+    
+    async function initDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open('BloodPressureDB', 1);
+        
+        request.onerror = (event) => {
+          console.error('数据库打开失败:', event.target.error);
+          reject(event.target.error);
+        };
+        
+        request.onupgradeneeded = (event) => {
+          db = event.target.result;
+          
+          // 创建血压记录存储
+          if (!db.objectStoreNames.contains('bpRecords')) {
+            const bpStore = db.createObjectStore('bpRecords', { keyPath: 'id' });
+            bpStore.createIndex('timestamp', 'timestamp', { unique: false });
+          }
+          
+          // 创建提醒存储
+          if (!db.objectStoreNames.contains('reminders')) {
+            const reminderStore = db.createObjectStore('reminders', { keyPath: 'id' });
+          }
+        };
+        
+        request.onsuccess = (event) => {
+          db = event.target.result;
+          console.log('数据库连接成功');
+          resolve();
+        };
+      });
+    }
+
+    // 添加血压记录
+    async function addBPRecord(record) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(['bpRecords'], 'readwrite');
+        const store = transaction.objectStore('bpRecords');
+        const request = store.add(record);
+        
+        request.onsuccess = () => {
+          loadBPRecords();
+          resolve();
+        };
+        
+        request.onerror = (event) => {
+          console.error('添加记录失败:', event.target.error);
+          reject(event.target.error);
+        };
+      });
+    }
+
+    // 加载血压记录
+    async function loadBPRecords() {
+      const recordsList = document.getElementById('records-list');
+      recordsList.innerHTML = '';
+      
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(['bpRecords'], 'readonly');
+        const store = transaction.objectStore('bpRecords');
+        const index = store.index('timestamp');
+        
+        // 按时间戳降序获取所有记录
+        const request = index.openCursor(null, 'prev');
+        
+        let records = [];
+        
+        request.onsuccess = (event) => {
+          const cursor = event.target.result;
+          
+          if (cursor) {
+            records.push(cursor.value);
+            cursor.continue();
+          } else {
+            if (records.length === 0) {
+              // 显示空状态
+              recordsList.innerHTML = `
+                <div class="empty-state">
+                  <div class="empty-icon">
+                    <i class="fas fa-file-medical-alt"></i>
+                  </div>
+                  <div class="empty-text">暂无血压记录</div>
+                  <button class="btn btn-primary" id="add-first-record">
+                    <i class="fas fa-plus btn-icon"></i> 添加第一条记录
+                  </button>
+                </div>
+              `;
+              
+              document.getElementById('add-first-record').addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+                
+                document.querySelector('[data-tab="record"]').classList.add('active');
+                document.getElementById('record').classList.add('active');
+              });
+            } else {
+              // 显示记录列表
+              records.forEach(record => {
+                const date = new Date(record.timestamp);
+                const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                const formattedTime = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+                
+                const recordElement = document.createElement('div');
+                recordElement.className = 'record-item';
+                recordElement.innerHTML = `
+                  <div class="record-header">
+                    <div class="record-date">${formattedDate}</div>
+                    <div class="record-time">${formattedTime}</div>
+                  </div>
+                  <div class="record-body">
+                    <div class="record-value">
+                      <div class="record-label">收缩压</div>
+                      <div class="record-number systolic">${record.systolic}</div>
+                    </div>
+                    <div class="record-value">
+                      <div class="record-label">舒张压</div>
+                      <div class="record-number diastolic">${record.diastolic}</div>
+                    </div>
+                    <div class="record-value">
+                      <div class="record-label">心率</div>
+                      <div class="record-number heart-rate">${record.pulse}</div>
+                    </div>
+                  </div>
+                  ${record.notes ? `<div class="record-notes">${record.notes}</div>` : ''}
+                  <div class="record-actions">
+                    <button class="btn-icon-only delete-record" data-id="${record.id}">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
+                `;
+                
+                recordsList.appendChild(recordElement);
+              });
+              
+              // 添加删除按钮事件
+              document.querySelectorAll('.delete-record').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                  const recordId = parseInt(e.currentTarget.dataset.id);
+                  showDeleteConfirmation(recordId);
+                });
+              });
+            }
+            
+            // 更新统计图表
+            updateChart();
+            
+            resolve(records);
+          }
+        };
+        
+        request.onerror = (event) => {
+          console.error('加载记录失败:', event.target.error);
+          reject(event.target.error);
+        };
+      });
+    }
+
+    // 删除血压记录
+    async function deleteBPRecord(id) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(['bpRecords'], 'readwrite');
+        const store = transaction.objectStore('bpRecords');
+        const request = store.delete(id);
+        
+        request.onsuccess = () => {
+          loadBPRecords();
+          resolve();
+        };
+        
+        request.onerror = (event) => {
+          console.error('删除记录失败:', event.target.error);
+          reject(event.target.error);
+        };
+      });
+    }
+
+    // 显示删除确认弹窗
+    function showDeleteConfirmation(recordId) {
+      const modal = document.getElementById('delete-modal');
+      modal.style.display = 'flex';
+      
+      const cancelBtn = document.getElementById('cancel-delete');
+      const confirmBtn = document.getElementById('confirm-delete');
+      
+      // 取消删除
+      cancelBtn.onclick = () => {
+        modal.style.display = 'none';
+      };
+      
+      // 确认删除
+      confirmBtn.onclick = async () => {
+        await deleteBPRecord(recordId);
+        modal.style.display = 'none';
+      };
+      
+      // 点击外部关闭
+      window.onclick = (event) => {
+        if (event.target === modal) {
+          modal.style.display = 'none';
+        }
+      };
+    }
+
+    // 添加提醒
+    async function addReminder(reminder) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(['reminders'], 'readwrite');
+        const store = transaction.objectStore('reminders');
+        const request = store.add(reminder);
+        
+        request.onsuccess = () => {
+          loadReminders();
+          resolve();
+        };
+        
+        request.onerror = (event) => {
+          console.error('添加提醒失败:', event.target.error);
+          reject(event.target.error);
+        };
+      });
+    }
+
+    // 加载提醒
+    async function loadReminders() {
+      const remindersList = document.getElementById('reminders-list');
+      remindersList.innerHTML = '';
+      
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(['reminders'], 'readonly');
+        const store = transaction.objectStore('reminders');
+        const request = store.getAll();
+        
+        request.onsuccess = (event) => {
+          const reminders = event.target.result;
+          
+          if (reminders.length === 0) {
+            // 显示空状态
+            remindersList.innerHTML = `
+              <div class="empty-state">
+                <div class="empty-icon">
+                  <i class="fas fa-bell-slash"></i>
+                </div>
+                <div class="empty-text">暂无提醒</div>
+              </div>
+            `;
+            document.getElementById('export-calendar').style.display = 'none';
+          } else {
+            // 显示提醒列表
+            reminders.forEach(reminder => {
+              const daysText = getDaysText(reminder.days);
+              
+              const reminderElement = document.createElement('div');
+              reminderElement.className = `reminder-item reminder-type-${reminder.type}`;
+              reminderElement.innerHTML = `
+                <div class="reminder-info">
+                  <div class="reminder-title">
+                    <i class="fas ${reminder.type === 'bp' ? 'fa-heartbeat' : 'fa-pills'} reminder-icon"></i>
+                    ${reminder.title}
+                  </div>
+                  <div class="reminder-time">${reminder.time} | ${daysText}</div>
+                </div>
+                <label class="reminder-toggle">
+                  <input type="checkbox" class="reminder-active" data-id="${reminder.id}" ${reminder.active ? 'checked' : ''}>
+                  <span class="toggle-slider"></span>
+                </label>
+              `;
+              
+              remindersList.appendChild(reminderElement);
+            });
+            
+            // 添加开关事件
+            document.querySelectorAll('.reminder-active').forEach(toggle => {
+              toggle.addEventListener('change', (e) => {
+                const reminderId = parseInt(e.target.dataset.id);
+                updateReminderStatus(reminderId, e.target.checked);
+              });
+            });
+            
+            // 显示导出按钮
+            document.getElementById('export-calendar').style.display = 'block';
+          }
+          
+          resolve(reminders);
+        };
+        
+        request.onerror = (event) => {
+          console.error('加载提醒失败:', event.target.error);
+          reject(event.target.error);
+        };
+      });
+    }
+
+    // 更新提醒状态
+    async function updateReminderStatus(id, active) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(['reminders'], 'readwrite');
+        const store = transaction.objectStore('reminders');
+        const request = store.get(id);
+        
+        request.onsuccess = (event) => {
+          const reminder = event.target.result;
+          reminder.active = active;
+          
+          const updateRequest = store.put(reminder);
+          
+          updateRequest.onsuccess = () => {
+            // 更新下一次提醒显示
+            updateNextReminderDisplay();
+            resolve();
+          };
+          
+          updateRequest.onerror = (event) => {
+            console.error('更新提醒状态失败:', event.target.error);
+            reject(event.target.error);
+          };
+        };
+        
+        request.onerror = (event) => {
+          console.error('获取提醒失败:', event.target.error);
+          reject(event.target.error);
+        };
+      });
+    }
+
+    // 获取日期文本
+    function getDaysText(days) {
+      const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+      
+      if (days.length === 7) {
+        return '每天';
+      } else if (days.includes(1) && days.includes(2) && days.includes(3) && days.includes(4) && days.includes(5) && days.length === 5) {
+        return '工作日';
+      } else if (days.includes(0) && days.includes(6) && days.length === 2) {
+        return '周末';
+      } else {
+        return days.map(day => dayNames[day]).join('、');
+      }
+    }
+
+    // 更新图表
+    async function updateChart() {
+      const transaction = db.transaction(['bpRecords'], 'readonly');
+      const store = transaction.objectStore('bpRecords');
+      const index = store.index('timestamp');
+      
+      const request = index.getAll();
+      
+      request.onsuccess = (event) => {
+        const records = event.target.result;
+        
+        if (records.length < 3) {
+          document.getElementById('bp-stats').innerHTML = `
+            <div class="empty-state">
+              <div class="empty-icon">
+                <i class="fas fa-chart-bar"></i>
+              </div>
+              <div class="empty-text">需要至少 3 条记录来查看统计数据</div>
+            </div>
+          `;
+          return;
+        }
+        
+        // 按时间排序
+        records.sort((a, b) => a.timestamp - b.timestamp);
+        
+        // 准备图表数据
+        const labels = records.map(record => {
+          const date = new Date(record.timestamp);
+          return `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+        });
+        
+        const systolicData = records.map(record => record.systolic);
+        const diastolicData = records.map(record => record.diastolic);
+        const pulseData = records.map(record => record.pulse);
+        
+        // 创建图表
+        const ctx = document.getElementById('bpChart').getContext('2d');
+        
+        // 检查是否已有图表实例
+        if (window.bpChartInstance) {
+          window.bpChartInstance.destroy();
+        }
+        
+        window.bpChartInstance = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: '收缩压',
+                data: systolicData,
+                borderColor: '#FF3B30',
+                backgroundColor: 'rgba(255, 59, 48, 0.1)',
+                tension: 0.2,
+                pointRadius: 3,
+                pointBackgroundColor: '#FF3B30'
+              },
+              {
+                label: '舒张压',
+                data: diastolicData,
+                borderColor: '#FF9500',
+                backgroundColor: 'rgba(255, 149, 0, 0.1)',
+                tension: 0.2,
+                pointRadius: 3,
+                pointBackgroundColor: '#FF9500'
+              },
+              {
+                label: '心率',
+                data: pulseData,
+                borderColor: '#007AFF',
+                backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                tension: 0.2,
+                pointRadius: 3,
+                pointBackgroundColor: '#007AFF',
+                yAxisID: 'y1'
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'top',
+                labels: {
+                  color: getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim()
+                }
+              },
+              tooltip: {
+                mode: 'index',
+                intersect: false
+              }
+            },
+            scales: {
+              x: {
+                ticks: {
+                  color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim(),
+                  maxRotation: 45,
+                  minRotation: 45
+                },
+                grid: {
+                  display: false
+                }
+              },
+              y: {
+                min: Math.min(...diastolicData) - 10 > 0 ? Math.min(...diastolicData) - 10 : 0,
+                max: Math.max(...systolicData) + 10,
+                ticks: {
+                  color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim()
+                },
+                grid: {
+                  color: getComputedStyle(document.documentElement).getPropertyValue('--border').trim()
+                },
+                title: {
+                  display: true,
+                  text: 'mmHg',
+                  color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim()
+                }
+              },
+              y1: {
+                position: 'right',
+                min: Math.min(...pulseData) - 5 > 0 ? Math.min(...pulseData) - 5 : 0,
+                max: Math.max(...pulseData) + 5,
+                ticks: {
+                  color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim()
+                },
+                grid: {
+                  display: false
+                },
+                title: {
+                  display: true,
+                  text: 'bpm',
+                  color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim()
+                }
+              }
+            }
+          }
+        });
+        
+        // 显示统计数据
+        const latestRecords = [...records].reverse().slice(0, 7);
+        
+        const avgSystolic = Math.round(latestRecords.reduce((sum, record) => sum + record.systolic, 0) / latestRecords.length);
+        const avgDiastolic = Math.round(latestRecords.reduce((sum, record) => sum + record.diastolic, 0) / latestRecords.length);
+        const avgPulse = Math.round(latestRecords.reduce((sum, record) => sum + record.pulse, 0) / latestRecords.length);
+        
+        const maxSystolic = Math.max(...latestRecords.map(record => record.systolic));
+        const maxDiastolic = Math.max(...latestRecords.map(record => record.diastolic));
+        const maxPulse = Math.max(...latestRecords.map(record => record.pulse));
+        
+        const minSystolic = Math.min(...latestRecords.map(record => record.systolic));
+        const minDiastolic = Math.min(...latestRecords.map(record => record.diastolic));
+        const minPulse = Math.min(...latestRecords.map(record => record.pulse));
+        
+        document.getElementById('bp-stats').innerHTML = `
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+            <div>
+              <h3 style="font-size: 1rem; margin-bottom: 0.5rem; color: var(--text-secondary);">收缩压 (mmHg)</h3>
+              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <div style="display: flex; justify-content: space-between;">
+                  <span>平均</span>
+                  <span style="font-weight: 600; color: var(--danger-color);">${avgSystolic}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span>最高</span>
+                  <span style="font-weight: 600;">${maxSystolic}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span>最低</span>
+                  <span style="font-weight: 600;">${minSystolic}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h3 style="font-size: 1rem; margin-bottom: 0.5rem; color: var(--text-secondary);">舒张压 (mmHg)</h3>
+              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <div style="display: flex; justify-content: space-between;">
+                  <span>平均</span>
+                  <span style="font-weight: 600; color: var(--warning-color);">${avgDiastolic}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span>最高</span>
+                  <span style="font-weight: 600;">${maxDiastolic}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span>最低</span>
+                  <span style="font-weight: 600;">${minDiastolic}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h3 style="font-size: 1rem; margin-bottom: 0.5rem; color: var(--text-secondary);">心率 (bpm)</h3>
+              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <div style="display: flex; justify-content: space-between;">
+                  <span>平均</span>
+                  <span style="font-weight: 600; color: var(--primary-color);">${avgPulse}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span>最高</span>
+                  <span style="font-weight: 600;">${maxPulse}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span>最低</span>
+                  <span style="font-weight: 600;">${minPulse}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+            <h3 style="font-size: 1rem; margin-bottom: 0.5rem; color: var(--text-secondary);">血压分类</h3>
+            <div style="margin-top: 0.5rem;">
+              ${getBPCategory(avgSystolic, avgDiastolic)}
+            </div>
+          </div>
+        `;
+      };
+      
+      request.onerror = (event) => {
+        console.error('获取数据失败:', event.target.error);
+      };
+    }
+
+    // 获取血压分类
+    function getBPCategory(systolic, diastolic) {
+      let category = '';
+      let color = '';
+      let description = '';
+      
+      if (systolic < 90 || diastolic < 60) {
+        category = '低血压';
+        color = 'var(--primary-color)';
+        description = '血压低于正常水平，可能需要咨询医生。';
+      } else if (systolic < 120 && diastolic < 80) {
+        category = '理想血压';
+        color = 'var(--success-color)';
+        description = '恭喜！您的血压处于理想范围内。';
+      } else if (systolic < 130 && diastolic < 85) {
+        category = '正常血压';
+        color = 'var(--success-color)';
+        description = '您的血压在正常范围内，继续保持健康的生活方式。';
+      } else if (systolic < 140 && diastolic < 90) {
+        category = '正常高值';
+        color = 'var(--warning-color)';
+        description = '您的血压处于正常高值，建议关注生活方式。';
+      } else if (systolic < 160 && diastolic < 100) {
+        category = '1级高血压';
+        color = 'var(--warning-color)';
+        description = '轻度高血压，建议遵循医生建议并定期监测。';
+      } else if (systolic < 180 && diastolic < 110) {
+        category = '2级高血压';
+        color = 'var(--danger-color)';
+        description = '中度高血压，需要积极治疗并定期检查。';
+      } else {
+        category = '3级高血压';
+        color = 'var(--danger-color)';
+        description = '重度高血压，请严格遵医嘱治疗并密切监测。';
+      }
+      
+      return `
+        <div style="font-weight: 600; font-size: 1.2rem; color: ${color}; margin-bottom: 0.5rem;">${category}</div>
+        <div style="color: var(--text-secondary);">${description}</div>
+        <div style="display: flex; gap: 0.5rem; margin-top: 0.8rem;">
+          <div style="color: var(--danger-color);">
+            <span style="font-weight: 600;">${systolic}</span>/
+          </div>
+          <div style="color: var(--warning-color);">
+            <span style="font-weight: 600;">${diastolic}</span> mmHg
+          </div>
+        </div>
+      `;
+    }
+
+    // 计算下一次提醒时间
+    async function getNextReminder() {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(['reminders'], 'readonly');
+        const store = transaction.objectStore('reminders');
+        const request = store.getAll();
+        
+        request.onsuccess = (event) => {
+          const reminders = event.target.result;
+          let nextReminder = null;
+          let minTimeDiff = Infinity;
+          
+          // 仅考虑激活的提醒
+          const activeReminders = reminders.filter(reminder => reminder.active);
+          
+          if (activeReminders.length === 0) {
+            resolve(null);
+            return;
+          }
+          
+          const now = new Date();
+          const currentDay = now.getDay(); // 0-6，0表示周日
+          const currentHour = now.getHours();
+          const currentMinute = now.getMinutes();
+          const currentTimeInMinutes = currentHour * 60 + currentMinute;
+          
+          activeReminders.forEach(reminder => {
+            // 解析提醒时间
+            const [reminderHour, reminderMinute] = reminder.time.split(':').map(Number);
+            const reminderTimeInMinutes = reminderHour * 60 + reminderMinute;
+            
+            // 计算今天距离提醒的时间差（分钟）
+            let timeDiff = reminderTimeInMinutes - currentTimeInMinutes;
+            
+            // 如果提醒时间已过，计算至下一个匹配的日期
+            if (timeDiff <= 0) {
+              // 找到下一个匹配的日期
+              let daysUntilNext = 0;
+              let nextDay = currentDay;
+              
+              do {
+                daysUntilNext++;
+                nextDay = (nextDay + 1) % 7;
+              } while (!reminder.days.includes(nextDay) && daysUntilNext < 7);
+              
+              timeDiff = daysUntilNext * 24 * 60 + timeDiff + 24 * 60; // 加24小时转为正数
+            } else {
+              // 如果今天不是提醒日，找到下一个提醒日
+              if (!reminder.days.includes(currentDay)) {
+                let daysUntilNext = 0;
+                let nextDay = currentDay;
+                
+                do {
+                  daysUntilNext++;
+                  nextDay = (nextDay + 1) % 7;
+                } while (!reminder.days.includes(nextDay) && daysUntilNext < 7);
+                
+                timeDiff = daysUntilNext * 24 * 60 + timeDiff;
+              }
+            }
+            
+            // 更新最近的提醒
+            if (timeDiff < minTimeDiff) {
+              minTimeDiff = timeDiff;
+              nextReminder = {
+                ...reminder,
+                minutesUntil: timeDiff
+              };
+            }
+          });
+          
+          resolve(nextReminder);
+        };
+        
+        request.onerror = (event) => {
+          console.error('获取提醒失败:', event.target.error);
+          reject(event.target.error);
+        };
+      });
+    }
+
+    // 更新下一次提醒显示
+    async function updateNextReminderDisplay() {
+      const nextReminder = await getNextReminder();
+      const container = document.getElementById('next-reminder-container');
+      
+      if (!nextReminder) {
+        container.style.display = 'none';
+        return;
+      }
+      
+      // 计算小时和分钟
+      const hoursUntil = Math.floor(nextReminder.minutesUntil / 60);
+      const minutesUntil = nextReminder.minutesUntil % 60;
+      
+      // 更新DOM
+      document.getElementById('next-reminder-time').textContent = nextReminder.time;
+      document.getElementById('reminder-countdown').textContent = `还有 ${hoursUntil}小时${minutesUntil}分钟`;
+      document.getElementById('reminder-message').textContent = `${nextReminder.title} (${nextReminder.type === 'bp' ? '测量血压' : '服药提醒'})`;
+      
+      container.style.display = 'block';
+    }
+
+    // 检查是否有错过的提醒
+    async function checkForMissedReminders() {
+      const transaction = db.transaction(['reminders'], 'readonly');
+      const store = transaction.objectStore('reminders');
+      const request = store.getAll();
+      
+      request.onsuccess = (event) => {
+        const reminders = event.target.result;
+        const now = new Date();
+        const missedReminders = [];
+        
+        reminders.forEach(reminder => {
+          if (!reminder.active) return;
+          
+          // 如果提醒没有lastChecked字段，或者lastChecked是很久以前
+          const lastChecked = reminder.lastChecked || 0;
+          const hoursSinceLastCheck = (now.getTime() - lastChecked) / (1000 * 60 * 60);
+          
+          // 如果上次检查是6小时以前，检查是否有错过的提醒
+          if (hoursSinceLastCheck >= 6) {
+            const [reminderHour, reminderMinute] = reminder.time.split(':').map(Number);
+            
+            // 检查前一天的提醒
+            const yesterday = new Date(now);
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayDay = yesterday.getDay();
+            
+            // 如果昨天是提醒日，且提醒时间在上次检查之后
+            if (reminder.days.includes(yesterdayDay)) {
+              const reminderTime = new Date(yesterday);
+              reminderTime.setHours(reminderHour, reminderMinute, 0, 0);
+              
+              if (reminderTime.getTime() > lastChecked && reminderTime.getTime() < now.getTime()) {
+                missedReminders.push({
+                  ...reminder,
+                  missedDate: reminderTime
+                });
+              }
+            }
+            
+            // 检查今天的提醒
+            const todayDay = now.getDay();
+            if (reminder.days.includes(todayDay)) {
+              const reminderTime = new Date(now);
+              reminderTime.setHours(reminderHour, reminderMinute, 0, 0);
+              
+              if (reminderTime.getTime() > lastChecked && reminderTime.getTime() < now.getTime()) {
+                missedReminders.push({
+                  ...reminder,
+                  missedDate: reminderTime
+                });
+              }
+            }
+            
+            // 更新lastChecked时间
+            updateReminderLastChecked(reminder.id, now.getTime());
+          }
+        });
+        
+        // 如果有错过的提醒，显示提醒
+        if (missedReminders.length > 0) {
+          showMissedRemindersAlert(missedReminders);
+        }
+      };
+    }
+
+    // 更新提醒最后检查时间
+    async function updateReminderLastChecked(id, time) {
+      const transaction = db.transaction(['reminders'], 'readwrite');
+      const store = transaction.objectStore('reminders');
+      const request = store.get(id);
+      
+      request.onsuccess = (event) => {
+        const reminder = event.target.result;
+        reminder.lastChecked = time;
+        store.put(reminder);
+      };
+    }
+
+    // 显示错过的提醒
+    function showMissedRemindersAlert(missedReminders) {
+      const modal = document.getElementById('missed-reminder-alert');
+      const missedList = document.getElementById('missed-reminders-list');
+      const dismissBtn = document.getElementById('dismiss-missed-reminder');
+      const recordBtn = document.getElementById('go-to-record');
+      
+      // 清空列表
+      missedList.innerHTML = '';
+      
+      // 添加错过的提醒
+      missedReminders.forEach(reminder => {
+        const date = new Date(reminder.missedDate);
+        const dateStr = `${date.getMonth() + 1}月${date.getDate()}日 ${reminder.time}`;
+        
+        const item = document.createElement('div');
+        item.style.padding = '8px 0';
+        item.style.borderBottom = '1px solid var(--border)';
+        item.innerHTML = `
+          <div style="font-weight: 500;">${reminder.title}</div>
+          <div style="font-size: 0.9rem; color: var(--text-secondary);">
+            ${dateStr} (${reminder.type === 'bp' ? '测量血压' : '服药提醒'})
+          </div>
+        `;
+        
+        missedList.appendChild(item);
+      });
+      
+      // 显示弹窗
+      modal.style.display = 'flex';
+      
+      // 关闭弹窗
+      dismissBtn.onclick = () => {
+        modal.style.display = 'none';
+      };
+      
+      // 跳转到记录页
+      recordBtn.onclick = () => {
+        modal.style.display = 'none';
+        
+        // 切换到记录页面
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+        
+        document.querySelector('[data-tab="record"]').classList.add('active');
+        document.getElementById('record').classList.add('active');
+      };
+      
+      // 点击外部关闭
+      window.onclick = (event) => {
+        if (event.target === modal) {
+          modal.style.display = 'none';
+        }
+      };
+    }
+
+    // 设置日历导出功能
+    function setupCalendarExport() {
+      const exportBtn = document.getElementById('export-calendar');
+      
+      exportBtn.addEventListener('click', async () => {
+        const reminders = await getAllReminders();
+        
+        if (reminders.length === 0) {
+          alert('没有提醒可以导出');
+          return;
+        }
+        
+        const icsContent = generateICSFile(reminders);
+        downloadICSFile(icsContent);
+      });
+    }
+
+    // 获取所有提醒
+    async function getAllReminders() {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(['reminders'], 'readonly');
+        const store = transaction.objectStore('reminders');
+        const request = store.getAll();
+        
+        request.onsuccess = (event) => {
+          resolve(event.target.result);
+        };
+        
+        request.onerror = (event) => {
+          reject(event.target.error);
+        };
+      });
+    }
+
+    // 生成ICS文件内容
+    function generateICSFile(reminders) {
+      // ICS文件头部
+      let icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Blood Pressure Tracker//CN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:血压助手
+X-WR-TIMEZONE:Asia/Shanghai
+`;
+      
+      // 为每个提醒创建事件
+      reminders.forEach(reminder => {
+        if (!reminder.active) return;
+        
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth();
+        const currentDate = now.getDate();
+        
+        // 解析提醒时间
+        const [hour, minute] = reminder.time.split(':').map(Number);
+        
+        // 为每个选中的日期创建未来4周的事件
+        reminder.days.forEach(day => {
+          // 计算下一个匹配的日期
+          let nextDate = new Date(currentYear, currentMonth, currentDate);
+          while (nextDate.getDay() !== day) {
+            nextDate.setDate(nextDate.getDate() + 1);
+          }
+          
+          // 创建4周的重复事件
+          for (let i = 0; i < 4; i++) {
+            const eventDate = new Date(nextDate);
+            eventDate.setDate(eventDate.getDate() + (i * 7));
+            
+            // 设置事件时间
+            eventDate.setHours(hour, minute, 0, 0);
+            
+            // 格式化日期为ICS格式
+            const startDate = formatDateForICS(eventDate);
+            const endDate = formatDateForICS(new Date(eventDate.getTime() + 15 * 60000)); // 15分钟后结束
+            
+            // 生成唯一ID
+            const uid = `bloodpressure-${reminder.id}-${i}-${day}-${Date.now()}`;
+            
+            // 添加事件到ICS内容
+            icsContent += `BEGIN:VEVENT
+UID:${uid}
+DTSTAMP:${formatDateForICS(new Date())}
+DTSTART:${startDate}
+DTEND:${endDate}
+SUMMARY:${reminder.title}
+DESCRIPTION:${reminder.type === 'bp' ? '测量血压' : '服用药物'}
+STATUS:CONFIRMED
+SEQUENCE:0
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:提醒
+TRIGGER:-PT15M
+END:VALARM
+END:VEVENT
+`;
+          }
+        });
+      });
+      
+      // ICS文件尾部
+      icsContent += 'END:VCALENDAR';
+      
+      return icsContent;
+    }
+
+    // 格式化日期为ICS格式
+    function formatDateForICS(date) {
+      return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/g, '');
+    }
+
+    // 下载ICS文件
+    function downloadICSFile(content) {
+      const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '血压助手提醒.ics';
+      a.style.display = 'none';
+      
+      document.body.appendChild(a);
+      a.click();
+      
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+      
+      alert('日历文件已生成，请导入到您的日历应用中');
+    }
+
+    // 申请通知权限
+    function requestNotificationPermission() {
+      if ('Notification' in window) {
+        if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+          Notification.requestPermission();
+        }
+      }
+    }
+
+    // 设置PWA安装
+    function setupPWA() {
+      let deferredPrompt;
+      const pwaInstallBanner = document.getElementById('pwa-install-banner');
+      const installBtn = document.getElementById('install-pwa');
+      const closeBtn = document.getElementById('close-pwa-banner');
+      
+      // 检查是否已经显示过安装提示
+      const pwaPromptShown = localStorage.getItem('pwaPromptShown');
+      
+      // 捕获安装前事件
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        
+        // 如果未显示过安装提示，则显示横幅
+        if (!pwaPromptShown) {
+          pwaInstallBanner.style.display = 'block';
+        }
+      });
+      
+      // 安装按钮点击事件
+      installBtn.addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        
+        // 无论用户选择什么，都隐藏横幅并记住已显示
+        pwaInstallBanner.style.display = 'none';
+        localStorage.setItem('pwaPromptShown', 'true');
+        
+        deferredPrompt = null;
+      });
+      
+      // 关闭按钮点击事件
+      closeBtn.addEventListener('click', () => {
+        pwaInstallBanner.style.display = 'none';
+        localStorage.setItem('pwaPromptShown', 'true');
+      });
+      
+      // 检测是否已安装为PWA
+      if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+        pwaInstallBanner.style.display = 'none';
+      }
+    }
+  </script>
+
+  <!-- 服务工作线程注册 -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js', { scope: './' })
+          .then((registration) => {
+            console.log('ServiceWorker registered: ', registration);
+          })
+          .catch((error) => {
+            console.log('ServiceWorker registration failed: ', error);
+          });
+      });
+    }
+  </script>
 </body>
 </html>
