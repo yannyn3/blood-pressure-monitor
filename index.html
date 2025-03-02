@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>血压助手</title>
+  <title>心脉守护</title>
 
   <!-- 引入Chart.js用于图表显示 -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -11,6 +11,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <!-- 引入FontAwesome图标 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- 闹钟音频 -->
+  <audio id="alarm-sound" loop>
+    <source src="https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3" type="audio/mpeg">
+    <source src="https://assets.mixkit.co/sfx/preview/mixkit-classic-alarm-995.mp3" type="audio/mpeg">
+  </audio>
 
   <style>
     :root {
@@ -64,13 +69,13 @@
     .container {
       max-width: 800px;
       margin: 0 auto;
-      padding: 1rem;
+      padding: 0.8rem;
     }
 
     /* 标题栏样式 */
     .header {
-      padding: 1rem 0;
-      margin-bottom: 1.5rem;
+      padding: 0.8rem 0;
+      margin-bottom: 1rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -88,7 +93,7 @@
       overflow: hidden;
       background-color: var(--card);
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-      margin-bottom: 20px;
+      margin-bottom: 15px;
       position: sticky;
       top: 0;
       z-index: 100;
@@ -97,12 +102,13 @@
     .tab {
       flex: 1;
       text-align: center;
-      padding: 12px;
+      padding: 10px 5px;
       cursor: pointer;
       font-weight: 500;
       color: var(--text-secondary);
       transition: all 0.3s ease;
       position: relative;
+      font-size: 0.9rem;
     }
 
     .tab.active {
@@ -124,11 +130,11 @@
     /* 内容区域样式 */
     .content {
       display: none;
-      padding: 1rem;
+      padding: 0.8rem;
       background-color: var(--card);
       border-radius: 12px;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.2rem;
     }
 
     .content.active {
@@ -140,32 +146,32 @@
       background-color: var(--card);
       border-radius: 12px;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-      padding: 1rem;
-      margin-bottom: 1rem;
+      padding: 0.8rem;
+      margin-bottom: 0.8rem;
     }
 
     .card-title {
       font-size: 1.1rem;
       font-weight: 600;
-      margin-bottom: 1rem;
+      margin-bottom: 0.8rem;
       color: var(--text-primary);
     }
 
     /* 表单样式 */
     .form-group {
-      margin-bottom: 1rem;
+      margin-bottom: 0.8rem;
     }
 
     .form-label {
       display: block;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.4rem;
       font-weight: 500;
       color: var(--text-primary);
     }
 
     .form-input {
       width: 100%;
-      padding: 12px 16px;
+      padding: 10px 14px;
       border-radius: 10px;
       border: 1px solid var(--border);
       background-color: var(--card);
@@ -181,13 +187,13 @@
 
     .form-row {
       display: flex;
-      gap: 10px;
+      gap: 8px;
       flex-wrap: wrap;
     }
 
     .form-col {
       flex: 1;
-      min-width: 150px;
+      min-width: 140px;
     }
 
     .bp-unit {
@@ -229,11 +235,11 @@
 
     /* 血压记录列表样式 */
     .records-list {
-      margin-top: 1rem;
+      margin-top: 0.8rem;
     }
 
     .record-item {
-      padding: 1rem;
+      padding: 0.8rem;
       border-radius: 10px;
       background-color: var(--card);
       border: 1px solid var(--border);
@@ -325,7 +331,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 1rem;
+      padding: 0.8rem;
       border-radius: 10px;
       background-color: var(--card);
       border: 1px solid var(--border);
@@ -396,7 +402,7 @@
     /* 无记录状态 */
     .empty-state {
       text-align: center;
-      padding: 2rem 1rem;
+      padding: 1.5rem 1rem;
       color: var(--text-secondary);
     }
 
@@ -611,14 +617,101 @@
     .pwa-install-btn i {
       margin-right: 8px;
     }
+
+    /* 闹钟控制按钮 */
+    .alarm-controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .alarm-btn {
+      flex: 1;
+      padding: 8px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--background);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+
+    .alarm-btn i {
+      margin-right: 5px;
+    }
+
+    /* 活跃闹钟样式 */
+    .alarm-active {
+      animation: pulse 1.5s infinite;
+    }
+
+    /* 音量控制 */
+    .volume-control {
+      width: 100%;
+      padding: 10px 0;
+    }
+
+    .volume-slider {
+      width: 100%;
+      -webkit-appearance: none;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--border);
+      outline: none;
+    }
+
+    .volume-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--primary-color);
+      cursor: pointer;
+    }
+
+    /* 永久固定的保存按钮 */
+    .floating-save-btn {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      max-width: 800px;
+      z-index: 99;
+      display: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    /* 闹钟提醒动画 */
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    /* 闹钟对话框 */
+    .alarm-modal {
+      animation: shake 0.5s infinite;
+    }
+
+    @keyframes shake {
+      0% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      50% { transform: translateX(0); }
+      75% { transform: translateX(5px); }
+      100% { transform: translateX(0); }
+    }
   </style>
 
   <!-- PWA META标签 -->
   <meta name="theme-color" content="#007AFF">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="血压助手">
-  <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIumHj+WOi+WKqeaJp+WMliIsCiAgInNob3J0X25hbWUiOiAi6YeP5Y6L5Yqp5omnIiwKICAic3RhcnRfdXJsIjogIi4vaW5kZXguaHRtbCIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiI2ZmZmZmZiIsCiAgInRoZW1lX2NvbG9yIjogIiMwMDdBRkYiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUI0Yld4dWN6MGlhSFIwY0RvdkwzZDNkeTUzTXk1dmNtY3ZNakF3TUM5emRtY2lJSEJ5WlhObGNuWmxRWE53WldOMFVtRjBhVzg5SW5oTmFXNVpUV2x1SUcxbFpYUWlJSFpwWlhkQ2IzZzlJakFnTUNBek5UQWdNelV3SWo0OGMzUjViR1UrTG1KaGMyVWdleUJtYVd4c09pQjNhR2wwWlRzZ1ptOXVkQzFtWVcxcGJIazZJQ0pKYm5SbGNpd2dMV0Z3Y0d4bExYTjVjM1JsYlN3Z1FteHBibXRNWVdOVGVYTjBaVzBzSUZOaGJuTXRVMlZ5YVdZaU95Qjlabk5sZEVKeWFXZG9kR3hsY3pKdmNYQm1ablpwYzJWUWJHRmlJRDBnSW01cGJXQm5PakF1TnpJNE15QnlaV2M2WkdWbUluMDhMM04wZVd4bFBqeHdjbVZqYVc5dWN5QnVZVzFsUFNKamIyMXdkWFJsY2k0aWN5SWdZM2d0Y21GdVoyVTlJbE5sWTJ0cGJpZ3RNVGt4TGpNeUxESXdMak13TERReExqSXlMQzAzTS4yNSwxNTAuMDAsLTg0LjU2KGJhemlld0teUHBmVkJiVmJ6cGZyeS14aVBueDJmTC1URFlGZG5wYUZnKSIvPjwvc3ZnPiIsCiAgICAgICJzaXplcyI6ICIxOTJ4MTkyIiwKICAgICAgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIKICAgIH0sCiAgICB7CiAgICAgICJzcmMiOiAiZGF0YTppbWFnZS9zdmcreG1sO2Jhc2U2NCxQSE4yWnlCNGJXeHVjejBpYUhSMGNEb3ZMM2QzZHk1M015NXZjbWN2TWpBd01DOXpkbWNpSUhCeVpYTmxjblpsUVhOd1pXTjBVbUYwYVc4OUluaE5hVzVaVFdsdUlHMWxaWFFpSUhacFpYZENiM2c5SWpBZ01DQXpOVEFnTXpVd0lqNDhjM1I1YkdVK0xtSmhjMlVnZXlCbWFXeHNPaUIzYUdsMFpUc2dabTl1ZEMxbVlXMXBiSGs2SUNKSmJuUmxjaXdnTFdGd2NHeGxMWE41YzNSbGJTd2dRbXhwYm10TVlXTlRlWE4wWlcwc0lGTmhibk10VTJWeWFXWWlPeUI5Wm5ObGRFSnlhV2RvZEd4bGN6SjNaVE5yY21Oa1BUMTdjMlZzWmk1b1pXbG5hSFE2TlhSdmJqMWNJbWR5WldWdWMya2hmVHd2YzNSNWJHVStQSEJ5WldOcGIyNXpJRzVoYldVOUltTnZiWEIxZEdWeUxpSnpJaUJqZUMxeVlXNW5aVDBpVTJWamEybHVLQzB4T1RFdU16SXNNakF1TXpBc05ERXVNaklzTFRjekxqSTFMREUxTUM0d01Dd3RPVFF1TlRVcEtteHpheWdwZjI1aGRHbDJaUzVTWlc1a1pYSW9LSVJrYVhKbFkzUjBkbmRqYVdSVGJqQXBLVHQzYVcxaVlYUTVZV05rWkdOV2RIWm9kR3hzUldwd1NWRlRMV2hyYTJSNGJFRm1lbWRuUlc1TlpYTWlMeUkrUEhKbFkzUWdlSEJrWm5SNVpDNDlNVDFuZEc4OVhDSnBaMmhKMGo0aTwvc3ZnPiIsCiAgICAgICJzaXplcyI6ICI1MTJ4NTEyIiwKICAgICAgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIKICAgIH0KICBdCn0=">
+  <meta name="apple-mobile-web-app-title" content="心脉守护">
+  <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIuW/g+iEkeeUn+aIvyIsCiAgInNob3J0X25hbWUiOiAi5b+D6ISR5a6I5oqVIiwKICAic3RhcnRfdXJsIjogIi4vaW5kZXguaHRtbCIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiI2ZmZmZmZiIsCiAgInRoZW1lX2NvbG9yIjogIiMwMDdBRkYiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUI0Yld4dWN6MGlhSFIwY0RvdkwzZDNkeTUzTXk1dmNtY3ZNakF3TUM5emRtY2lJSEJ5WlhObGNuWmxRWE53WldOMFVtRjBhVzg5SW5oTmFXNVpUV2x1SUcxbFpYUWlJSFpwWlhkQ2IzZzlJakFnTUNBek5UQWdNelV3SWo0OGMzUjViR1UrTG1KaGMyVWdleUJtYVd4c09pQjNhR2wwWlRzZ1ptOXVkQzFtWVcxcGJIazZJQ0pKYm5SbGNpd2dMV0Z3Y0d4bExYTjVjM1JsYlN3Z1FteHBibXRNWVdOVGVYTjBaVzBzSUZOaGJuTXRVMlZ5YVdZaU95Qjlabk5sZEVKeWFXZG9kR3hsY3pKdmNYQm1ablpwYzJWUWJHRmlJRDBnSW01cGJXQm5PakF1TnpJNE15QnlaV2M2WkdWbUluMDhMM04wZVd4bFBqeHdjbVZqYVc5dWN5QnVZVzFsUFNKamIyMXdkWFJsY2k0aWN5SWdZM2d0Y21GdVoyVTlJbE5sWTJ0cGJpZ3RNVGt4TGpNeUxESXdMak13TERReExqSXlMQzAzTS4yNSwxNTAuMDAsLTg0LjU2KGJhemlld0teUHBmVkJiVmJ6cGZyeS14aVBueDJmTC1URFlGZG5wYUZnKSIvPjwvc3ZnPiIsCiAgICAgICJzaXplcyI6ICIxOTJ4MTkyIiwKICAgICAgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIKICAgIH0sCiAgICB7CiAgICAgICJzcmMiOiAiZGF0YTppbWFnZS9zdmcreG1sO2Jhc2U2NCxQSE4yWnlCNGJXeHVjejBpYUhSMGNEb3ZMM2QzZHk1M015NXZjbWN2TWpBd01DOXpkbWNpSUhCeVpYTmxjblpsUVhOd1pXTjBVbUYwYVc4OUluaE5hVzVaVFdsdUlHMWxaWFFpSUhacFpYZENiM2c5SWpBZ01DQXpOVEFnTXpVd0lqNDhjM1I1YkdVK0xtSmhjMlVnZXlCbWFXeHNPaUIzYUdsMFpUc2dabTl1ZEMxbVlXMXBiSGs2SUNKSmJuUmxjaXdnTFdGd2NHeGxMWE41YzNSbGJTd2dRbXhwYm10TVlXTlRlWE4wWlcwc0lGTmhibk10VTJWeWFXWWlPeUI5Wm5ObGRFSnlhV2RvZEd4bGN6SjNaVE5yY21Oa1BUMTdjMlZzWmk1b1pXbG5hSFE2TlhSdmJqMWNJbWR5WldWdWMya2hmVHd2YzNSNWJHVStQSEJ5WldOcGIyNXpJRzVoYldVOUltTnZiWEIxZEdWeUxpSnpJaUJqZUMxeVlXNW5aVDBpVTJWamEybHVLQzB4T1RFdU16SXNNakF1TXpBc05ERXVNaklzTFRjekxqSTFMREUxTUM0d01Dd3RPVFF1TlRVcEtteHpheWdwZjI1aGRHbDJaUzVTWlc1a1pYSW9LSVJrYVhKbFkzUjBkbmRqYVdSVGJqQXBLVHQzYVcxaVlYUTVZV05rWkdOV2RIWm9kR3hzUldwd1NWRlRMV2hyYTJSNGJFRm1lbWRuUlc1TlpYTWlMeUkrUEhKbFkzUWdlSEJrWm5SNVpDNDlNVDFuZEc4OVhDSnBaMmhKMGo0aTwvc3ZnPiIsCiAgICAgICJzaXplcyI6ICI1MTJ4NTEyIiwKICAgICAgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIKICAgIH0KICBdCn0=">
 </head>
 <body>
   <div class="container">
@@ -630,7 +723,7 @@
           <i class="fas fa-heartbeat"></i>
         </div>
         <div class="pwa-banner-text">
-          <div class="pwa-banner-title">安装血压助手应用</div>
+          <div class="pwa-banner-title">安装心脉守护应用</div>
           <div class="pwa-banner-subtitle">将应用添加到主屏幕，随时记录和查看血压数据</div>
         </div>
       </div>
@@ -640,7 +733,7 @@
     </div>
 
     <div class="header">
-      <h1 class="app-title">血压助手</h1>
+      <h1 class="app-title">心脉守护</h1>
     </div>
 
     <!-- 下一次提醒倒计时显示 -->
@@ -650,6 +743,17 @@
         <div class="next-reminder-time" id="next-reminder-time">--:--</div>
         <div class="countdown" id="reminder-countdown">还有 --:-- 小时</div>
         <div id="reminder-message">提醒内容</div>
+        <div class="alarm-controls">
+          <button class="alarm-btn test-alarm" id="test-alarm">
+            <i class="fas fa-bell"></i> 测试闹钟
+          </button>
+          <button class="alarm-btn adjust-volume" id="toggle-volume-controls">
+            <i class="fas fa-volume-up"></i> 调整音量
+          </button>
+        </div>
+        <div id="volume-controls" style="display: none;" class="volume-control">
+          <input type="range" min="0" max="100" value="80" class="volume-slider" id="volume-slider">
+        </div>
       </div>
     </div>
 
@@ -763,17 +867,17 @@
     <!-- 提醒页面 -->
     <div id="reminder" class="content">
       <div class="card">
-        <h2 class="card-title">网页版提醒功能说明</h2>
+        <h2 class="card-title">闹钟提醒功能</h2>
         <p style="margin-bottom: 15px; color: var(--text-secondary);">
-          由于浏览器限制，网页版无法在后台发送提醒。以下是几种替代方案：
+          心脉守护支持闹钟提醒功能，当到达设定时间时，会播放闹钟声提醒您：
         </p>
         
         <div class="notification-tip">
           <i class="fas fa-info-circle"></i>
           <div class="notification-tip-text">
-            1. 添加提醒后，我们会在您下次访问网页时检查是否有错过的提醒<br>
-            2. 您可以将提醒导出到手机日历应用<br>
-            3. 您可以将此网页安装为应用，获得更好的体验
+            1. 添加提醒后，闹钟将在设定时间响起<br>
+            2. 请保持网页处于打开状态或安装为应用<br>
+            3. 您可以测试闹钟声音并调整音量
           </div>
         </div>
       </div>
@@ -812,6 +916,18 @@
             </div>
           </div>
           
+          <div class="form-group">
+            <label class="form-label">闹铃设置</label>
+            <div class="alarm-controls">
+              <button type="button" class="alarm-btn test-alarm" id="preview-alarm">
+                <i class="fas fa-play"></i> 预览闹铃
+              </button>
+              <div class="volume-control">
+                <input type="range" min="0" max="100" value="80" class="volume-slider" id="alarm-volume-slider">
+              </div>
+            </div>
+          </div>
+          
           <button type="submit" class="btn btn-primary btn-block">
             <i class="fas fa-bell btn-icon"></i> 保存提醒
           </button>
@@ -837,6 +953,13 @@
       </div>
     </div>
 
+    <!-- 固定保存按钮 -->
+    <div class="floating-save-btn" id="floating-save-btn">
+      <button type="button" class="btn btn-primary btn-block" id="floating-save">
+        <i class="fas fa-save btn-icon"></i> 保存记录
+      </button>
+    </div>
+
     <!-- 确认删除弹窗 -->
     <div id="delete-modal" class="modal">
       <div class="modal-content">
@@ -849,6 +972,30 @@
         <div class="modal-footer">
           <button id="cancel-delete" class="btn" style="background-color: var(--background);">取消</button>
           <button id="confirm-delete" class="btn btn-primary" style="background-color: var(--danger-color);">删除</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 闹钟提醒弹窗 -->
+    <div id="alarm-modal" class="modal">
+      <div class="modal-content alarm-modal">
+        <div class="modal-header">
+          <h3 class="modal-title" id="alarm-title">提醒时间到</h3>
+        </div>
+        <div class="modal-body">
+          <p id="alarm-message">现在是您设定的提醒时间</p>
+          <div class="alarm-controls" style="margin-top: 15px;">
+            <button type="button" class="alarm-btn" id="snooze-alarm">
+              <i class="fas fa-clock"></i> 5分钟后再提醒
+            </button>
+            <button type="button" class="alarm-btn" id="stop-alarm">
+              <i class="fas fa-stop"></i> 停止闹钟
+            </button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="dismiss-alarm" class="btn" style="background-color: var(--background);">稍后提醒</button>
+          <button id="complete-alarm-task" class="btn btn-primary">已完成</button>
         </div>
       </div>
     </div>
@@ -893,6 +1040,12 @@
       // 设置表单提交
       setupForms();
 
+      // 设置闹钟和提醒功能
+      setupAlarmSystem();
+
+      // 设置浮动保存按钮
+      setupFloatingSaveButton();
+
       // 加载数据
       loadBPRecords();
       loadReminders();
@@ -905,6 +1058,12 @@
 
       // 设置日期按钮点击逻辑
       setupDayButtons();
+      
+      // 检查是否有当前应该触发的提醒
+      checkCurrentReminders();
+      
+      // 每分钟检查一次是否有应该触发的提醒
+      setInterval(checkCurrentReminders, 60000);
       
       // 检查是否有错过的提醒
       checkForMissedReminders();
@@ -936,6 +1095,9 @@
           if (tabName === 'stats') {
             updateChart();
           }
+
+          // 如果切换到记录页，显示浮动保存按钮
+          updateFloatingSaveButtonVisibility(tabName);
         });
       });
 
@@ -946,7 +1108,119 @@
 
         document.querySelector('[data-tab="record"]').classList.add('active');
         document.getElementById('record').classList.add('active');
+        
+        // 更新浮动保存按钮可见性
+        updateFloatingSaveButtonVisibility('record');
       });
+    }
+
+    // 设置浮动保存按钮
+    function setupFloatingSaveButton() {
+      const floatingSaveBtn = document.getElementById('floating-save-btn');
+      const floatingSave = document.getElementById('floating-save');
+      
+      // 监听滚动事件，检查主保存按钮是否可见
+      window.addEventListener('scroll', () => {
+        checkSaveButtonVisibility();
+      });
+      
+      // 窗口大小变化时也检查
+      window.addEventListener('resize', () => {
+        checkSaveButtonVisibility();
+      });
+      
+      // 初始检查
+      updateFloatingSaveButtonVisibility('record');
+      
+      // 浮动按钮点击事件
+      floatingSave.addEventListener('click', () => {
+        const bpForm = document.getElementById('bp-form');
+        
+        // 触发表单提交
+        if (bpForm) {
+          const submitEvent = new Event('submit', {
+            'bubbles': true,
+            'cancelable': true
+          });
+          bpForm.dispatchEvent(submitEvent);
+        }
+      });
+      
+      // 检查普通保存按钮的可见性
+      function checkSaveButtonVisibility() {
+        // 只有在记录页时才执行此检查
+        const recordTab = document.querySelector('[data-tab="record"]');
+        if (!recordTab.classList.contains('active')) return;
+        
+        const submitBtn = document.querySelector('#bp-form .btn-primary');
+        if (!submitBtn) return;
+        
+        const rect = submitBtn.getBoundingClientRect();
+        const isVisible = (
+          rect.top >= 0 &&
+          rect.left >= 0 &&
+          rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+          rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+        );
+        
+        if (isVisible) {
+          floatingSaveBtn.style.opacity = '0';
+          setTimeout(() => {
+            floatingSaveBtn.style.display = 'none';
+          }, 300);
+        } else {
+          floatingSaveBtn.style.display = 'block';
+          setTimeout(() => {
+            floatingSaveBtn.style.opacity = '1';
+          }, 10);
+        }
+      }
+    }
+
+    // 更新浮动保存按钮可见性
+    function updateFloatingSaveButtonVisibility(tabName) {
+      const floatingSaveBtn = document.getElementById('floating-save-btn');
+      
+      if (tabName === 'record') {
+        // 显示按钮，但先检查主保存按钮是否在视图内
+        setTimeout(() => {
+          checkSaveButtonVisibility();
+        }, 100);
+      } else {
+        // 隐藏按钮
+        floatingSaveBtn.style.opacity = '0';
+        setTimeout(() => {
+          floatingSaveBtn.style.display = 'none';
+        }, 300);
+      }
+    }
+
+    // 检查普通保存按钮的可见性
+    function checkSaveButtonVisibility() {
+      const floatingSaveBtn = document.getElementById('floating-save-btn');
+      const submitBtn = document.querySelector('#bp-form .btn-primary');
+      
+      if (!submitBtn) return;
+      
+      const rect = submitBtn.getBoundingClientRect();
+      const isVisible = (
+        rect.top >= 0 &&
+        rect.left >= 0 &&
+        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+      );
+      
+      if (isVisible) {
+        floatingSaveBtn.style.opacity = '0';
+        setTimeout(() => {
+          floatingSaveBtn.style.display = 'none';
+        }, 300);
+      } else {
+        floatingSaveBtn.style.display = 'block';
+        setTimeout(() => {
+          floatingSaveBtn.style.opacity = '1';
+        }, 10);
+      }
     }
 
     // 设置表单提交
@@ -996,6 +1270,7 @@
         const title = document.getElementById('reminder-title').value;
         const type = document.getElementById('reminder-type').value;
         const time = document.getElementById('reminder-time').value;
+        const volume = document.getElementById('alarm-volume-slider').value;
         
         // 获取选中的日期
         const selectedDays = [];
@@ -1015,7 +1290,8 @@
           time,
           days: selectedDays,
           active: true,
-          lastChecked: Date.now() // 记录最后检查时间
+          lastChecked: Date.now(), // 记录最后检查时间
+          volume: volume // 保存音量设置
         };
 
         await addReminder(reminder);
@@ -1038,6 +1314,210 @@
         // 重新加载提醒列表
         loadReminders();
       });
+
+      // 预览闹铃按钮
+      document.getElementById('preview-alarm').addEventListener('click', () => {
+        previewAlarm();
+      });
+    }
+
+    // 设置闹钟系统
+    function setupAlarmSystem() {
+      const alarmSound = document.getElementById('alarm-sound');
+      const testAlarmBtn = document.getElementById('test-alarm');
+      const volumeControlsToggle = document.getElementById('toggle-volume-controls');
+      const volumeControls = document.getElementById('volume-controls');
+      const volumeSlider = document.getElementById('volume-slider');
+      
+      // 设置初始音量
+      alarmSound.volume = 0.8;
+      
+      // 测试闹钟按钮
+      testAlarmBtn.addEventListener('click', () => {
+        if (alarmSound.paused) {
+          testAlarmBtn.innerHTML = '<i class="fas fa-stop"></i> 停止测试';
+          testAlarmBtn.classList.add('alarm-active');
+          playAlarm();
+        } else {
+          testAlarmBtn.innerHTML = '<i class="fas fa-bell"></i> 测试闹钟';
+          testAlarmBtn.classList.remove('alarm-active');
+          stopAlarm();
+        }
+      });
+      
+      // 音量控制显示切换
+      volumeControlsToggle.addEventListener('click', () => {
+        if (volumeControls.style.display === 'none') {
+          volumeControls.style.display = 'block';
+          volumeControlsToggle.innerHTML = '<i class="fas fa-volume-up"></i> 隐藏音量';
+        } else {
+          volumeControls.style.display = 'none';
+          volumeControlsToggle.innerHTML = '<i class="fas fa-volume-up"></i> 调整音量';
+        }
+      });
+      
+      // 音量滑块调整
+      volumeSlider.addEventListener('input', (e) => {
+        const volume = e.target.value / 100;
+        alarmSound.volume = volume;
+        
+        // 同步另一个音量滑块
+        document.getElementById('alarm-volume-slider').value = e.target.value;
+      });
+      
+      // 另一个音量滑块
+      document.getElementById('alarm-volume-slider').addEventListener('input', (e) => {
+        const volume = e.target.value / 100;
+        alarmSound.volume = volume;
+        
+        // 同步第一个音量滑块
+        volumeSlider.value = e.target.value;
+      });
+      
+      // 设置闹钟弹窗按钮
+      document.getElementById('stop-alarm').addEventListener('click', () => {
+        stopAlarm();
+        closeAlarmModal();
+      });
+      
+      document.getElementById('snooze-alarm').addEventListener('click', () => {
+        snoozeAlarm();
+      });
+      
+      document.getElementById('dismiss-alarm').addEventListener('click', () => {
+        stopAlarm();
+        closeAlarmModal();
+      });
+      
+      document.getElementById('complete-alarm-task').addEventListener('click', () => {
+        stopAlarm();
+        closeAlarmModal();
+        
+        // 根据提醒类型导航到对应页面
+        const alarmTitle = document.getElementById('alarm-title').textContent;
+        if (alarmTitle.includes('测量血压')) {
+          navigateToTab('record');
+        }
+      });
+    }
+
+    // 播放闹钟
+    function playAlarm(volume = null) {
+      const alarmSound = document.getElementById('alarm-sound');
+      
+      if (volume !== null) {
+        alarmSound.volume = volume / 100;
+      }
+      
+      alarmSound.currentTime = 0;
+      
+      // 尝试播放，处理自动播放策略限制
+      const playPromise = alarmSound.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.log('自动播放被阻止:', error);
+          // 显示播放控制按钮
+          document.getElementById('test-alarm').classList.add('alarm-active');
+        });
+      }
+    }
+
+    // 停止闹钟
+    function stopAlarm() {
+      const alarmSound = document.getElementById('alarm-sound');
+      alarmSound.pause();
+      
+      // 重置测试按钮
+      const testAlarmBtn = document.getElementById('test-alarm');
+      testAlarmBtn.innerHTML = '<i class="fas fa-bell"></i> 测试闹钟';
+      testAlarmBtn.classList.remove('alarm-active');
+    }
+
+    // 延迟提醒闹钟
+    function snoozeAlarm() {
+      stopAlarm();
+      closeAlarmModal();
+      
+      // 5分钟后再次提醒
+      setTimeout(() => {
+        showAlarmModal(currentAlarmData);
+      }, 5 * 60 * 1000);
+      
+      // 显示提示
+      alert('已设置5分钟后再次提醒');
+    }
+
+    // 预览闹铃
+    function previewAlarm() {
+      const alarmSound = document.getElementById('alarm-sound');
+      const previewBtn = document.getElementById('preview-alarm');
+      const volume = document.getElementById('alarm-volume-slider').value;
+      
+      if (alarmSound.paused) {
+        alarmSound.volume = volume / 100;
+        alarmSound.play();
+        previewBtn.innerHTML = '<i class="fas fa-stop"></i> 停止预览';
+        
+        // 3秒后自动停止
+        setTimeout(() => {
+          alarmSound.pause();
+          previewBtn.innerHTML = '<i class="fas fa-play"></i> 预览闹铃';
+        }, 3000);
+      } else {
+        alarmSound.pause();
+        previewBtn.innerHTML = '<i class="fas fa-play"></i> 预览闹铃';
+      }
+    }
+
+    // 显示闹钟提醒弹窗
+    let currentAlarmData = null;
+    function showAlarmModal(reminder) {
+      currentAlarmData = reminder;
+      
+      const modal = document.getElementById('alarm-modal');
+      const title = document.getElementById('alarm-title');
+      const message = document.getElementById('alarm-message');
+      
+      // 设置标题和消息
+      title.textContent = reminder.title;
+      message.textContent = reminder.type === 'bp' ? 
+        '现在是您设定的测量血压时间' : 
+        '现在是您设定的服药时间';
+      
+      // 设置按钮文本
+      document.getElementById('complete-alarm-task').textContent = 
+        reminder.type === 'bp' ? '去记录血压' : '已服药';
+      
+      // 显示弹窗
+      modal.style.display = 'flex';
+      
+      // 播放闹钟声音
+      playAlarm(reminder.volume || 80);
+      
+      // 添加震动效果
+      if ('vibrate' in navigator) {
+        navigator.vibrate([500, 250, 500, 250, 500]);
+      }
+    }
+
+    // 关闭闹钟提醒弹窗
+    function closeAlarmModal() {
+      const modal = document.getElementById('alarm-modal');
+      modal.style.display = 'none';
+      currentAlarmData = null;
+    }
+
+    // 导航到特定标签页
+    function navigateToTab(tabName) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+      
+      document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+      document.getElementById(tabName).classList.add('active');
+      
+      // 更新浮动保存按钮可见性
+      updateFloatingSaveButtonVisibility(tabName);
     }
 
     // 设置日期按钮
@@ -1062,7 +1542,7 @@
         btn.style.backgroundColor = 'var(--background)';
         btn.style.color = 'var(--text-primary)';
         btn.style.border = '1px solid var(--border)';
-        btn.style.minWidth = '40px';
+        btn.style.minWidth = '36px';
       });
     }
 
@@ -1162,6 +1642,9 @@
                 
                 document.querySelector('[data-tab="record"]').classList.add('active');
                 document.getElementById('record').classList.add('active');
+                
+                // 更新浮动保存按钮可见性
+                updateFloatingSaveButtonVisibility('record');
               });
             } else {
               // 显示记录列表
@@ -1786,6 +2269,43 @@
       container.style.display = 'block';
     }
 
+    // 检查当前提醒
+    async function checkCurrentReminders() {
+      const now = new Date();
+      const currentDay = now.getDay(); // 0-6，0表示周日
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      const currentTimeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
+      
+      const transaction = db.transaction(['reminders'], 'readonly');
+      const store = transaction.objectStore('reminders');
+      const request = store.getAll();
+      
+      request.onsuccess = (event) => {
+        const reminders = event.target.result;
+        
+        // 找到当前应该触发的提醒
+        const currentReminders = reminders.filter(reminder => {
+          return reminder.active && 
+                 reminder.days.includes(currentDay) && 
+                 reminder.time === currentTimeStr;
+        });
+        
+        if (currentReminders.length > 0) {
+          // 触发闹钟提醒
+          showAlarmModal(currentReminders[0]);
+          
+          // 同时尝试发送通知
+          if (Notification.permission === 'granted') {
+            new Notification('心脉守护提醒', {
+              body: `${currentReminders[0].title} - 现在是您设定的提醒时间`,
+              icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMwMDdBRkYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBjbGFzcz0iZmVhdGhlciBmZWF0aGVyLWhlYXJ0Ij48cGF0aCBkPSJNMjAgOC45NGExLjMxIDEuMzEgMCAwIDAtLjA2LS4yNyA1IDUgMCAwIDAtOS44OCAwIDEuMzEgMS4zMSAwIDAgMC0uMDYuMjdDOSA2LjY1LTMuOTYgMTguNDkgOSAyMWM1LjQ1LTEuMTIgOS00LjYzIDktOC45NHoiPjwvcGF0aD48cGF0aCBkPSJNNyAxN2g4IiBzdHJva2U9IiNmZjNiMzAiPjwvcGF0aD48L3N2Zz4='
+            });
+          }
+        }
+      };
+    }
+
     // 检查是否有错过的提醒
     async function checkForMissedReminders() {
       const transaction = db.transaction(['reminders'], 'readonly');
@@ -1906,11 +2426,7 @@
         modal.style.display = 'none';
         
         // 切换到记录页面
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
-        
-        document.querySelector('[data-tab="record"]').classList.add('active');
-        document.getElementById('record').classList.add('active');
+        navigateToTab('record');
       };
       
       // 点击外部关闭
@@ -1960,10 +2476,10 @@
       // ICS文件头部
       let icsContent = `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//Blood Pressure Tracker//CN
+PRODID:-//心脉守护//CN
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
-X-WR-CALNAME:血压助手
+X-WR-CALNAME:心脉守护
 X-WR-TIMEZONE:Asia/Shanghai
 `;
       
@@ -2000,7 +2516,7 @@ X-WR-TIMEZONE:Asia/Shanghai
             const endDate = formatDateForICS(new Date(eventDate.getTime() + 15 * 60000)); // 15分钟后结束
             
             // 生成唯一ID
-            const uid = `bloodpressure-${reminder.id}-${i}-${day}-${Date.now()}`;
+            const uid = `heartguardian-${reminder.id}-${i}-${day}-${Date.now()}`;
             
             // 添加事件到ICS内容
             icsContent += `BEGIN:VEVENT
@@ -2041,7 +2557,7 @@ END:VEVENT
       
       const a = document.createElement('a');
       a.href = url;
-      a.download = '血压助手提醒.ics';
+      a.download = '心脉守护提醒.ics';
       a.style.display = 'none';
       
       document.body.appendChild(a);
